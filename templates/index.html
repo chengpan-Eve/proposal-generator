@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>方案书生成器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            padding: 40px 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        
+        .upload-text {
+            color: #999;
+            font-size: 14px;
+        }
+        
+        .upload-text strong {
+            color: #667eea;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .file-info {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #333;
+            display: none;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+            font-weight: 600;
+        }
+        
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .message {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .download-link {
+            display: inline-block;
+            margin-top: 15px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 智能方案书生成器</h1>
+        <div class="subtitle">上传数据表，自动生成专业方案书（Word格式）</div>
+        
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">📊</div>
+            <div class="upload-text">
+                点击选择文件或拖拽文件到此处<br>
+                <strong>支持格式：.xlsx, .xls, .csv</strong>
+            </div>
+        </div>
+        
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+        
+        <div class="file-info" id="fileInfo"></div>
+        
+        <button id="generateBtn" disabled onclick="generateProposal()">
+            🚀 生成方案书
+        </button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #666;">正在生成方案书，请稍候...</p>
+        </div>
+        
+        <div class="message" id="message"></div>
+        
+        <div class="footer">
+            💡 提示：数据表需包含项目名称、负责人、预算等字段
+        </div>
+    </div>
+    
+    <script>
+        let selectedFile = null;
+        
+        // 文件选择监听
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                selectedFile = file;
+                const fileInfo = document.getElementById('fileInfo');
+                fileInfo.style.display = 'block';
+                fileInfo.innerHTML = `📎 已选择：${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+                document.getElementById('generateBtn').disabled = false;
+                
+                // 隐藏之前的消息
+                document.getElementById('message').style.display = 'none';
+            }
+        });
+        
+        // 拖拽上传
+        const uploadArea = document.querySelector('.upload-area');
+        
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#667eea';
+            uploadArea.style.background = '#f8f9ff';
+        });
+        
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ddd';
+            uploadArea.style.background = 'transparent';
+        });
+        
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ddd';
+            uploadArea.style.background = 'transparent';
+            
+            const file = e.dataTransfer.files[0];
+            if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv'))) {
+                selectedFile = file;
+                document.getElementById('fileInput').files = e.dataTransfer.files;
+                const fileInfo = document.getElementById('fileInfo');
+                fileInfo.style.display = 'block';
+                fileInfo.innerHTML = `📎 已选择：${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+                document.getElementById('generateBtn').disabled = false;
+                document.getElementById('message').style.display = 'none';
+            } else {
+                showMessage('请上传 Excel 或 CSV 文件', 'error');
+            }
+        });
+        
+        async function generateProposal() {
+            if (!selectedFile) {
+                showMessage('请先选择文件', 'error');
+                return;
+            }
+            
+            // 显示加载状态
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('message').style.display = 'none';
+            
+            // 构建 FormData
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    showMessage('✅ ' + result.message, 'success');
+                    
+                    // 创建下载链接
+                    const downloadBtn = document.createElement('a');
+                    downloadBtn.href = result.download_url;
+                    downloadBtn.download = '';
+                    downloadBtn.textContent = '点击下载方案书';
+                    downloadBtn.className = 'download-link';
+                    
+                    const msgDiv = document.getElementById('message');
+                    msgDiv.appendChild(document.createElement('br'));
+                    msgDiv.appendChild(downloadBtn);
+                    
+                    // 自动下载
+                    window.location.href = result.download_url;
+                } else {
+                    showMessage('❌ ' + (result.error || '生成失败'), 'error');
+                }
+            } catch (error) {
+                showMessage('❌ 网络错误：' + error.message, 'error');
+            } finally {
+                document.getElementById('generateBtn').disabled = false;
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        function showMessage(text, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = text;
+            msgDiv.className = `message ${type}`;
+            msgDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
